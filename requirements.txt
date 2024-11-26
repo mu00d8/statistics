@@ -1,0 +1,4 @@
+scipy>=1.9.1
+
+# You may need to install R
+rpy2
