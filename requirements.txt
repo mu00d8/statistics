@@ -1,4 +1,10 @@
+numpy
+
 scipy>=1.9.1
+# typing stubs for scipy
+scipy-stubs
+
+pandas
 
 # You may need to install R
 rpy2
