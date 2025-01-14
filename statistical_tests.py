@@ -214,7 +214,45 @@ def test_data(data: Dict[str, List[int]], args: Namespace) -> None:
     print("\n"*3)
 
 
+def gen_paper_table_two_tools(data: Dict[str, Dict[str, List[int]]], args: Namespace) -> None:
+    table: List[str] = []
+    for target, target_data in data.items():
+        if args.eval_targets and target not in args.eval_targets:
+            continue
+        print(f"[i] {target=}")
+        if not args.tweak in target_data:
+            print(f"[!] {target}: Tweak={args.tweak} not in target_data")
+            continue
+        if len(target_data) < 2:
+            print(f"[!] {target}: Data for less than 2 fuzzers ({list(target_data.keys())})")
+            continue
+        assert len(target_data) == 2, f"{target}: Expected two fuzzers, found {len(target_data)}"
+        others = set(target_data).difference({args.tweak})
+        assert len(others) == 1, f"Expected 1, found multiple/none: {others} (tweak={args.tweak})"
+        other: str = others.pop()
+        decision = test_twoway({args.tweak : target_data[args.tweak], other : target_data[other]}, args)
+        if len(target_data[other]) != len(target_data[args.tweak]):
+            print(f"[!] num_runs[{other}]={len(target_data[other])} <-> num_runs[{args.tweak}]={len(target_data[args.tweak])}")
+            continue
+        eff_sz = a12(target_data[other], target_data[args.tweak])
+        eff_sz_field = effect_size_latex_table_field(eff_sz)
+        if decision:
+            eff_sz_field = r"\textbf{" + eff_sz_field + r"}"
+        else:
+            eff_sz_field = " " * 8 + eff_sz_field + " "
+        latex_target = target.replace("_", r"\_")
+        row = f"{latex_target:34} & {eff_sz_field:8} \\\\"
+        table.append(row)
+    print("\n"*3)
+    print("\n".join(table))
+
+
 def gen_paper_table(data: Dict[str, Dict[str, List[int]]], args: Namespace) -> None:
+    # if we have exclusively two tools, we don't need to find the best competitor
+    num_tools = set(map(lambda k: len(data[k]), data))
+    if len(num_tools) == 1 and num_tools.pop() == 2:
+        print(f"[i] We only have two fuzzers for all targets. Generating smaller table..")
+        return gen_paper_table_two_tools(data, args)
     table: List[str] = []
     for target, target_data in data.items():
         if args.eval_targets and target not in args.eval_targets:
